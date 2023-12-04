@@ -21,5 +21,5 @@ func readFile(file string) {
 }
 
 func main() {
-	readFile("input.txt")
+	readFile("dayX/input.txt")
 }

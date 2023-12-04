@@ -73,7 +73,7 @@ func readFile(file string) []string {
 }
 
 func main() {
-	lines := readFile("input.txt")
+	lines := readFile("day2/input.txt")
 	games, err := parseGames(lines)
 	if err != nil {
 		println(err)

@@ -198,7 +198,7 @@ func (engineSchematic *EngineSchematic) getGearRatios() []int {
 }
 
 func main() {
-	lines := readFile("input.txt")
+	lines := readFile("day3/input.txt")
 	engineSchematic := generateEngineSchematic(lines)
 	engineSchematic.populateSymbolsAndNumbers()
 	numbers := engineSchematic.getPartNumbers()

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	lines := readFile("input.txt")
+	lines := readFile("day1/input.txt")
 
 	var calibrationValues []int
 
