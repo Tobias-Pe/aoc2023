@@ -33,15 +33,45 @@ type Map struct {
 func main() {
 	start := time.Now()
 	blocks := readFile("day5/input.txt")
+	run(blocks, true)
+
 	run(blocks, false)
 	fmt.Println("Finished in", time.Since(start))
 }
 
 func run(blocks []string, isPart1 bool) {
 	allSeedRanges, maps := parseBlocks(blocks, isPart1)
-	var producerWaitGroup sync.WaitGroup
-	locationResults := make(chan int64, 10)
 
+	var minLocation int64 = math.MaxInt64
+	locationResults := make(chan int64, 100)
+
+	consumerWaitGroup := runConsumer(locationResults, &minLocation)
+	producerWaitGroup := runProducer(locationResults, allSeedRanges, maps)
+
+	producerWaitGroup.Wait()
+	close(locationResults)
+	consumerWaitGroup.Wait()
+
+	fmt.Println("Min Location:", minLocation)
+}
+
+func runConsumer(locationResults chan int64, minLocation *int64) *sync.WaitGroup {
+	var consumerWaitGroup sync.WaitGroup
+	consumerWaitGroup.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		resultCounter := 0
+		for location := range locationResults {
+			fmt.Println("Result arrived from routine #", resultCounter)
+			resultCounter++
+			*minLocation = min(*minLocation, location)
+		}
+	}(&consumerWaitGroup)
+	return &consumerWaitGroup
+}
+
+func runProducer(locationResults chan int64, allSeedRanges []NumberRange, maps []Map) *sync.WaitGroup {
+	var producerWaitGroup sync.WaitGroup
 	seedNrsPerRoutine := int64(10000000)
 	for i, seed := range allSeedRanges {
 		for splitIndex := 0; int64(splitIndex) <= seed.length/seedNrsPerRoutine; splitIndex++ {
@@ -52,31 +82,13 @@ func run(blocks []string, isPart1 bool) {
 				length: numRangeLength,
 			}
 			if splitRange.getEnd() > seed.getEnd() {
-				splitRange.length = seed.getEnd() - splitRange.start // plus minus 1 ???
+				splitRange.length = seed.getEnd() - splitRange.start + 1
 			}
 			producerWaitGroup.Add(1)
 			go routineSeedTasksConsumer(&producerWaitGroup, maps, locationResults, splitRange, strconv.Itoa(i)+";"+strconv.Itoa(splitIndex))
 		}
 	}
-
-	var consumerWaitGroup sync.WaitGroup
-	consumerWaitGroup.Add(1)
-	var minLocation int64 = math.MaxInt64
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		resultCounter := 0
-		for location := range locationResults {
-			fmt.Println("Result arrived from routine #", resultCounter)
-			resultCounter++
-			minLocation = min(minLocation, location)
-		}
-	}(&consumerWaitGroup)
-
-	producerWaitGroup.Wait()
-	close(locationResults)
-
-	consumerWaitGroup.Wait()
-	fmt.Println("Min Location:", minLocation)
+	return &producerWaitGroup
 }
 
 func routineSeedTasksConsumer(wg *sync.WaitGroup, maps []Map, locationResults chan int64, seedTask NumberRange, routineID string) {
@@ -88,7 +100,7 @@ func routineSeedTasksConsumer(wg *sync.WaitGroup, maps []Map, locationResults ch
 		minLocation = min(minLocation, locationResult)
 	}
 	locationResults <- minLocation
-	fmt.Println(routineID, "Finished")
+	//fmt.Println(routineID, "Finished")
 }
 
 func readFile(file string) []string {
