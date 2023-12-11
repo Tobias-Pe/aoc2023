@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Game struct {
@@ -73,6 +74,7 @@ func readFile(file string) []string {
 }
 
 func main() {
+	start := time.Now()
 	lines := readFile("day2/input.txt")
 	games, err := parseGames(lines)
 	if err != nil {
@@ -87,6 +89,7 @@ func main() {
 
 	sum = addUpMinimumSetPowers(games)
 	fmt.Println("Sum of minimum set powers", sum)
+	fmt.Println("Finished in", time.Since(start))
 }
 
 func addUpMinimumSetPowers(games []Game) int {

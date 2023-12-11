@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
+	start := time.Now()
+
 	readFile("dayX/input.txt")
+
+	fmt.Println("Finished in", time.Since(start))
 }
 
 func readFile(file string) []string {

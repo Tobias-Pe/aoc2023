@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Race struct {
@@ -26,6 +27,7 @@ func (race Race) getCountPossibleDistancesToWin() int {
 }
 
 func main() {
+	start := time.Now()
 	lines := readFile("day6/input.txt")
 	races, err := parseRaces(lines)
 	if err != nil {
@@ -47,6 +49,8 @@ func main() {
 	possibleDistancesToWin := race.getCountPossibleDistancesToWin()
 
 	fmt.Println("Part2: Multiplication of the number of ways to beat the records", possibleDistancesToWin)
+
+	fmt.Println("Finished in", time.Since(start))
 }
 
 func readFile(file string) []string {

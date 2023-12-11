@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Scratchcard struct {
@@ -42,6 +43,8 @@ func (scratchcard Scratchcard) getMatches() int {
 }
 
 func main() {
+
+	start := time.Now()
 	content := readFile("day4/input.txt")
 	scratchcards, err := getScratchcards(content)
 	if err != nil {
@@ -56,6 +59,7 @@ func main() {
 	fmt.Println("Points of all scratchcards:", sum)
 
 	fmt.Println("Part2: Total cards:", calculateWinningScratchCards(scratchcards))
+	fmt.Println("Finished in", time.Since(start))
 
 }
 

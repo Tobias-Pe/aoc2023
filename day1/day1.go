@@ -5,9 +5,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
+
+	start := time.Now()
 	lines := readFile("day1/input.txt")
 
 	var calibrationValues []int
@@ -28,6 +31,7 @@ func main() {
 	}
 
 	println(sum)
+	fmt.Println("Finished in", time.Since(start))
 }
 
 func readFile(file string) []string {

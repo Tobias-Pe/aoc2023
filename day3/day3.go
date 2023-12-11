@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Coordinate struct {
@@ -198,6 +199,7 @@ func (engineSchematic *EngineSchematic) getGearRatios() []int {
 }
 
 func main() {
+	start := time.Now()
 	lines := readFile("day3/input.txt")
 	engineSchematic := generateEngineSchematic(lines)
 	engineSchematic.populateSymbolsAndNumbers()
@@ -207,6 +209,7 @@ func main() {
 
 	ratios := engineSchematic.getGearRatios()
 	fmt.Println("Sum of part numbers", sumGearRatios(ratios))
+	fmt.Println("Finished in", time.Since(start))
 }
 
 func readFile(file string) []string {
