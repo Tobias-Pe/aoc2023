@@ -56,6 +56,28 @@ func (u Unit) isValidCoordinate(maxRow, maxColumn int) bool {
 type Universe struct {
 	galaxies []*Unit
 	data     [][]*Unit
+
+	emptyRow      map[int]bool
+	emptyColumn   map[int]bool
+	expansionRate int
+}
+
+func (universe Universe) didConnectionWentOntoEmpty(from *Unit, to *Unit) bool {
+	_, ok := universe.emptyRow[to.row]
+	if ok {
+		if from.column == to.column {
+			return true
+		}
+	}
+
+	_, ok = universe.emptyColumn[to.column]
+	if ok {
+		if from.row == to.row {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (universe *Universe) getGalaxyPairCombinations() map[*Unit]map[*Unit]bool {
@@ -72,6 +94,7 @@ func (universe *Universe) getGalaxyPairCombinations() map[*Unit]map[*Unit]bool {
 }
 
 func (universe *Universe) expand() {
+	universe.emptyRow = map[int]bool{}
 	for i := 0; i < len(universe.data); i++ {
 		rowHasNoGalaxy := true
 		for _, unit := range universe.data[i] {
@@ -83,13 +106,10 @@ func (universe *Universe) expand() {
 		if !rowHasNoGalaxy {
 			continue
 		}
-		var tmpData [][]*Unit
-		tmpData = append(tmpData, universe.data[:i+1]...)
-		tmpData = append(tmpData, universe.data[i:]...)
-		universe.data = tmpData
-		i++
+		universe.emptyRow[i] = true
 	}
 
+	universe.emptyColumn = map[int]bool{}
 	for j := 0; j < len(universe.data[0]); j++ {
 		columnHasNoGalaxy := true
 		for i := 0; i < len(universe.data); i++ {
@@ -102,35 +122,8 @@ func (universe *Universe) expand() {
 			continue
 		}
 
-		for i := 0; i < len(universe.data); i++ {
-			var tmpData []*Unit
-			tmpData = append(tmpData, universe.data[i][:j+1]...)
-			tmpData = append(tmpData, universe.data[i][j:]...)
-			universe.data[i] = tmpData
-		}
-		j++
+		universe.emptyColumn[j] = true
 	}
-
-	universe.fixIndexes()
-}
-
-// Attention this breaks all previous pointers and recreates them
-func (universe *Universe) fixIndexes() {
-	var newGalaxies []*Unit
-	for i, row := range universe.data {
-		for j, unit := range row {
-			fixedNewUnitPtr := &Unit{
-				row:      i,
-				column:   j,
-				isGalaxy: unit.isGalaxy,
-			}
-			if fixedNewUnitPtr.isGalaxy {
-				newGalaxies = append(newGalaxies, fixedNewUnitPtr)
-			}
-			universe.data[i][j] = fixedNewUnitPtr
-		}
-	}
-	universe.galaxies = newGalaxies
 }
 
 func main() {
@@ -140,8 +133,13 @@ func main() {
 	universe := parseUniverse(lines)
 	universe.expand()
 
+	universe.expansionRate = 2
 	sum := sumShortestPathsStepsBetweenAllGalaxies(universe)
 	fmt.Println("[Part1] Sum of steps to all other galaxies", sum)
+
+	universe.expansionRate = 1000000
+	sum = sumShortestPathsStepsBetweenAllGalaxies(universe)
+	fmt.Println("[Part2] Sum of steps to all other galaxies", sum)
 
 	fmt.Println("Finished in", time.Since(start))
 }
@@ -152,10 +150,10 @@ func sumShortestPathsStepsBetweenAllGalaxies(universe Universe) int {
 	var producerWaitGroup sync.WaitGroup
 	galaxyDistanceSumChannel := make(chan int, len(galaxyPairs))
 
-	resultCounter := 0
+	threadCounter := 0
 	for galaxy, targetGalaxies := range galaxyPairs {
 		producerWaitGroup.Add(1)
-		go func(galaxy *Unit, targetGalaxies map[*Unit]bool) {
+		go func(galaxy *Unit, targetGalaxies map[*Unit]bool, id int) {
 			defer producerWaitGroup.Done()
 			sum := 0
 			allOtherGalaxiesWithDistance := calcShortestPathToOtherGalaxiesSteps(galaxy, universe)
@@ -165,10 +163,9 @@ func sumShortestPathsStepsBetweenAllGalaxies(universe Universe) int {
 					sum += otherGalaxie.distance
 				}
 			}
-			fmt.Println("Result arrived from routine #", resultCounter)
-			resultCounter++
 			galaxyDistanceSumChannel <- sum
-		}(galaxy, targetGalaxies)
+		}(galaxy, targetGalaxies, threadCounter)
+		threadCounter++
 	}
 
 	producerWaitGroup.Wait()
@@ -211,8 +208,12 @@ func calcShortestPathToOtherGalaxiesSteps(galaxy *Unit, universe Universe) []*Un
 		unvisited = unvisited[1:]
 
 		for _, neighbour := range currentUnit.getNeighbourUnits(matrix) {
-			if currentUnit.distance+1 < neighbour.distance {
-				neighbour.distance = currentUnit.distance + 1
+			cost := 1
+			if universe.didConnectionWentOntoEmpty(currentUnit.unit, neighbour.unit) {
+				cost = universe.expansionRate
+			}
+			if currentUnit.distance+cost < neighbour.distance {
+				neighbour.distance = currentUnit.distance + cost
 				neighbour.previous = currentUnit
 			}
 		}
@@ -252,7 +253,9 @@ func parseUniverse(lines []string) Universe {
 				column:   j,
 				isGalaxy: char == '#',
 			}
-			universe.galaxies = append(universe.galaxies, unitPtr)
+			if unitPtr.isGalaxy {
+				universe.galaxies = append(universe.galaxies, unitPtr)
+			}
 			universe.data[i] = append(universe.data[i], unitPtr)
 		}
 	}
